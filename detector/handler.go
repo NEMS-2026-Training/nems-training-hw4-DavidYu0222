@@ -15,6 +15,7 @@ const (
 	ERR_VALUE_INCORRECT  = "Unexpected value is received"
 )
 
+// 4.AMF to AUSF
 func HandleAuth5gAkaComfirmRequest(request *http_wrapper.Request) *http_wrapper.Response {
 	logger.DetectorLog.Infof("Auth5gAkaComfirmRequest")
 	updateConfirmationData := request.Body.(models.ConfirmationData)
@@ -22,8 +23,8 @@ func HandleAuth5gAkaComfirmRequest(request *http_wrapper.Request) *http_wrapper.
 
 	// NOTE: The request from AMF is guaranteed to be correct
 
-	// TODO: Send request to target NF by setting correct uri
-	targetNfUri := ""
+	// TODO: Send request to target NF by setting correct uri (forward)
+	targetNfUri := "http://127.0.0.9:8000"	// AUSF's uri
 
 	response, problemDetails, err := consumer.SendAuth5gAkaConfirmRequest(targetNfUri, ConfirmationDataResponseID, &updateConfirmationData)
 
@@ -42,6 +43,7 @@ func HandleAuth5gAkaComfirmRequest(request *http_wrapper.Request) *http_wrapper.
 	return http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
 }
 
+// 1. AMF to AUSF
 func HandleUeAuthPostRequest(request *http_wrapper.Request) *http_wrapper.Response {
 	logger.DetectorLog.Infof("HandleUeAuthPostRequest")
 	updateAuthenticationInfo := request.Body.(models.AuthenticationInfo)
@@ -49,7 +51,7 @@ func HandleUeAuthPostRequest(request *http_wrapper.Request) *http_wrapper.Respon
 	// NOTE: The request from AMF is guaranteed to be correct
 
 	// TODO: Send request to target NF by setting correct uri
-	targetNfUri := ""
+	targetNfUri := "http://127.0.0.9:8000"	// AUSF's uri
 
 	response, respHeader, problemDetails, err := consumer.SendUeAuthPostRequest(targetNfUri, &updateAuthenticationInfo)
 
@@ -68,6 +70,7 @@ func HandleUeAuthPostRequest(request *http_wrapper.Request) *http_wrapper.Respon
 	return http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
 }
 
+// 2. AUSF to UDM
 func HandleGenerateAuthDataRequest(request *http_wrapper.Request) *http_wrapper.Response {
 	logger.DetectorLog.Infoln("Handle GenerateAuthDataRequest")
 
@@ -77,7 +80,7 @@ func HandleGenerateAuthDataRequest(request *http_wrapper.Request) *http_wrapper.
 	// TODO: Check IEs in request body is correct
 
 	// TODO: Send request to target NF by setting correct uri
-	targetNfUri := ""
+	targetNfUri := "http://127.0.0.3:8000"	// UDM's uri
 
 	response, problemDetails, err := consumer.SendGenerateAuthDataRequest(targetNfUri, supiOrSuci, &authInfoRequest)
 	xres, sqnXorAk, ck, ik, autn := retrieveBasicDeriveFactor(&CurrentAuthProcedure.AuthSubsData, response.AuthenticationVector.Rand)
@@ -98,13 +101,14 @@ func HandleGenerateAuthDataRequest(request *http_wrapper.Request) *http_wrapper.
 	return http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
 }
 
+// 3. UDM to UDR
 func HandleQueryAuthSubsData(request *http_wrapper.Request) *http_wrapper.Response {
 	logger.DetectorLog.Infof("Handle QueryAuthSubsData")
 
 	ueId := request.Params["ueId"]
 
 	// TODO: Send request to correct NF by setting correct uri
-	targetNfUri := ""
+	targetNfUri := "http://127.0.0.4:8000" // UDR's uri
 
 	response, problemDetails, err := consumer.SendAuthSubsDataGet(targetNfUri, ueId)
 
