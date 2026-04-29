@@ -10,4 +10,5 @@ var CurrentAuthProcedure AuthProcedureInfo
 // so that you can use them in different message handler
 type AuthProcedureInfo struct {
 	AuthSubsData       models.AuthenticationSubscription
+	hxresStar          []byte
 }
