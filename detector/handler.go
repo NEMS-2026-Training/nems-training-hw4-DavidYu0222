@@ -31,6 +31,28 @@ func HandleAuth5gAkaComfirmRequest(request *http_wrapper.Request) *http_wrapper.
 	response, problemDetails, err := consumer.SendAuth5gAkaConfirmRequest(targetNfUri, ConfirmationDataResponseID, &updateConfirmationData)
 
 	// TODO: Check IEs in response body is correct
+	// Response OpenAPI: models.ConfirmationDataResponse
+	logger.DetectorLog.Infof("CheckAuth5gAkaConfirmResponse")
+
+	// Compute Kseaf for 5G AKA
+	kseaf := retrieveKseaf(
+		CurrentAuthProcedure.kausf,
+		"6C",
+		[]byte(CurrentAuthProcedure.servingNetworkName),
+	)
+	kseafHex := hex.EncodeToString(kseaf)
+
+	// logger.DetectorLog.Infof("DEBUG Kseaf in response:    '%s'", response.Kseaf)
+	// logger.DetectorLog.Infof("DEBUG kseafHex computed:    '%s'", kseafHex)
+
+	// Check Kseaf
+	if response.Kseaf == "" {
+		logger.DetectorLog.Errorln("ConfirmationDataResponse.Kseaf: " + ERR_MISS_CONDITION)
+		response.Kseaf = kseafHex
+	} else if response.Kseaf != kseafHex {
+		logger.DetectorLog.Errorln("ConfirmationDataResponse.Kseaf: " + ERR_VALUE_INCORRECT)
+		response.Kseaf = kseafHex
+	}
 
 	if response != nil {
 		return http_wrapper.NewResponse(http.StatusOK, nil, response)
@@ -117,6 +139,7 @@ func HandleGenerateAuthDataRequest(request *http_wrapper.Request) *http_wrapper.
 		mnc = "0" + mnc                      // pad to 3 digits → "093"
 	}
 	servingNetworkName := "5G:mnc" + mnc + ".mcc" + mcc + ".3gppnetwork.org" // Format is "5G:mnc<MNC>.mcc<MCC>.3gppnetwork.org"
+	CurrentAuthProcedure.servingNetworkName = servingNetworkName
 
 	// Check ServingNetworkName
 	if authInfoRequest.ServingNetworkName == "" {
@@ -161,6 +184,7 @@ func HandleGenerateAuthDataRequest(request *http_wrapper.Request) *http_wrapper.
 		[]byte(authInfoRequest.ServingNetworkName),     // P0 = SN name
 		sqnXorAk,                                      // P1 = SQN ⊕ AK
 	)
+	CurrentAuthProcedure.kausf = kausf
 	kausfHex := hex.EncodeToString(kausf)
 
 	// logger.DetectorLog.Infof("DEBUG Autn in response:     '%s'", response.AuthenticationVector.Autn)
